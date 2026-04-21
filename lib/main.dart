@@ -1,132 +1,102 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'Product.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() => runApp(const MyApp12());
+
+class MyApp12 extends StatefulWidget {
+  const MyApp12({super.key});
+
+  @override
+  State<MyApp12> createState() => _MyAppState();
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class _MyAppState extends State<MyApp12> {
+  late Future<List<Product>> products;
+
+  Future<List<Product>> fetchProduct() async {
+    final res = await http.get(Uri.parse('http://10.0.2.2:8080/portofolio-maulisa/public/api/product'));
+    
+    if (res.statusCode == 200) {
+      // --- TRIK MEMBERSIHKAN ERROR PHP (AMBIL JSON-NYA SAJA) ---
+      String rawData = res.body;
+      int startIndex = rawData.indexOf('{'); 
+      if (startIndex != -1) {
+        rawData = rawData.substring(startIndex); 
+      }
+      // ---------------------------------------------------------
+
+      var data = jsonDecode(rawData);
+      var parsed = data['list'].cast<Map<String, dynamic>>();
+      return parsed.map<Product>((json) => Product.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load products');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    products = fetchProduct(); // Tarik data saat aplikasi dibuka
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Layout part 1',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Demo Layout part 1'),
+      title: 'Network',
+      theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
-        child: Column(
-          children: [
-            // --- BAGIAN ATAS (Header & Profil) ---
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text("Welcome,", style: TextStyle(
-                        color: Color(0xFF7367F0),
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.25)
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: FutureBuilder<List<Product>>(
+            future: products,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                if (snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text('Tidak ada data', style: TextStyle(color: Colors.teal, fontSize: 28)),
+                  );
+                }
+                // Menampilkan data dalam bentuk list
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    return Card(
+                      color: Colors.white,
+                      child: InkWell(
+                        onTap: () {}, // Biar ada efek klik
+                        child: Container(
+                          padding: const EdgeInsets.only(left: 20, top: 15),
+                          margin: const EdgeInsets.only(bottom: 40, left: 10, top: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                snapshot.data![index].name, 
+                                style: const TextStyle(color: Colors.blue, fontSize: 28)
+                              ),
+                              Text(
+                                snapshot.data![index].price.toString(), 
+                                style: const TextStyle(color: Colors.green, fontSize: 24)
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      Text(
-                        "2311102243_Siti Halim Siregar", 
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF4B4B4B)),
-                      ),
-                    ],
-                  ),
-                  const CircleAvatar(
-                    radius: 20,
-                  ),
-                ],
-              )
-            ),
-
-            // --- BAGIAN TENGAH (Kartu Status Kelulusan TOEFL) ---
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 35),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF4839EB), Color(0xFF7367F0)]),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Status tes TOEFL Anda:',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text("LULUS", style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.25)
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text(
-                          'Listening\n      80',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        Text(
-                          'Structure\n      80',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                        Text(
-                          'Reading\n      90',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-
-            // --- BAGIAN BAWAH (Judul Riwayat Tes) ---
-            Container(
-              child: const Text('Riwayat Tes', style: TextStyle(
-                color: Colors.black,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.25))
-            ),
-          ]
-        )
-      )
+                    );
+                  }
+                );
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              // Animasi loading muter-muter saat nunggu data
+              return const Center(child: CircularProgressIndicator());
+            },
+          ),
+        ),
+      ),
     );
   }
 }
